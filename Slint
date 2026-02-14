@@ -1,0 +1,842 @@
+ local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+--== SISTEMA DE NOTIFICAÇÕES MOBILE EMPILHÁVEIS COM SOM ==--
+local function notify(title, text, duration)
+	duration = duration or 2
+	local mainGui = PlayerGui:FindFirstChild("GhostNotifications")
+	if not mainGui then
+		mainGui = Instance.new("ScreenGui")
+		mainGui.Name = "GhostNotifications"
+		mainGui.ResetOnSpawn = false
+		mainGui.IgnoreGuiInset = true
+		mainGui.Parent = PlayerGui
+	end
+
+	local container = mainGui:FindFirstChild("Container")
+	if not container then
+		container = Instance.new("Frame", mainGui)
+		container.Name = "Container"
+		container.Size = UDim2.new(0, 270, 0.5, 0)
+		container.Position = UDim2.new(1, -280, 0.45, 0)
+		container.BackgroundTransparency = 1
+
+		local layout = Instance.new("UIListLayout", container)
+		layout.SortOrder = Enum.SortOrder.LayoutOrder
+		layout.Padding = UDim.new(0, 5)
+		layout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+	end
+
+	local frame = Instance.new("Frame")
+	frame.Name = "Notification"
+	frame.Size = UDim2.new(1, 0, 0, 65)
+	frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+	frame.BackgroundTransparency = 0.25
+	frame.BorderSizePixel = 0
+	frame.ClipsDescendants = true
+	frame.Parent = container
+	Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
+
+	local stroke = Instance.new("UIStroke", frame)
+	stroke.Thickness = 1.3
+	stroke.Color = Color3.fromRGB(80, 80, 80)
+
+	local titleLabel = Instance.new("TextLabel", frame)
+	titleLabel.Size = UDim2.new(1, -20, 0, 20)
+	titleLabel.Position = UDim2.new(0, 10, 0, 5)
+	titleLabel.Text = title
+	titleLabel.TextColor3 = Color3.new(1, 1, 1)
+	titleLabel.Font = Enum.Font.GothamBold
+	titleLabel.TextSize = 17
+	titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+	titleLabel.BackgroundTransparency = 1
+
+	local textLabel = Instance.new("TextLabel", frame)
+	textLabel.Size = UDim2.new(1, -20, 0, 25)
+	textLabel.Position = UDim2.new(0, 10, 0, 27)
+	textLabel.Text = text
+	textLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+	textLabel.Font = Enum.Font.Gotham
+	textLabel.TextSize = 15
+	textLabel.TextWrapped = true
+	textLabel.TextXAlignment = Enum.TextXAlignment.Left
+	textLabel.BackgroundTransparency = 1
+
+	local timeLabel = Instance.new("TextLabel", frame)
+	timeLabel.Size = UDim2.new(1, -10, 0, 15)
+	timeLabel.Position = UDim2.new(0, 0, 1, -15)
+	timeLabel.Text = "(" .. duration .. "s)"
+	timeLabel.TextColor3 = Color3.fromRGB(160, 160, 160)
+	timeLabel.Font = Enum.Font.Code
+	timeLabel.TextSize = 13
+	timeLabel.TextXAlignment = Enum.TextXAlignment.Right
+	timeLabel.BackgroundTransparency = 1
+
+	--== SOM DA NOTIFICAÇÃO ==--
+	local sound = Instance.new("Sound", frame)
+	sound.SoundId = "rbxassetid://18595195017"
+	sound.Volume = 1
+	sound.PlayOnRemove = true
+	sound:Destroy() -- tocará instantaneamente ao remover
+
+	--== ANIMAÇÃO DE ENTRADA ==--
+	frame.Position = UDim2.new(1, 280, 0, 0)
+	frame.BackgroundTransparency = 1
+	TweenService:Create(frame, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+		Position = UDim2.new(0, 0, 0, 0),
+		BackgroundTransparency = 0.25
+	}):Play()
+
+	task.spawn(function()
+		local start = tick()
+		while tick() - start < duration and frame.Parent do
+			local remaining = math.ceil(duration - (tick() - start))
+			timeLabel.Text = "(" .. remaining .. "s)"
+			RunService.RenderStepped:Wait()
+		end
+	end)
+
+	--== SAÍDA AUTOMÁTICA ==--
+	task.delay(duration, function()
+		if frame and frame.Parent then
+			local tweenOut = TweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+				Position = UDim2.new(1, 280, 0, 0),
+				BackgroundTransparency = 1
+			})
+			tweenOut:Play()
+			tweenOut.Completed:Wait()
+			frame:Destroy()
+		end
+	end)
+end
+
+
+
+notify("warn", "script by kit_cynALT", 1)
+
+--== HAVENS SCRIPT HUB COM SISTEMA DE CONFIGURAÇÃO COMPLETO ==--
+
+local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
+
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+ScreenGui.Name = "HavensScriptHub"
+
+local TweenService = game:GetService("TweenService")
+
+--== Botão de abrir aprimorado (sem imagem, estilo código) ==--
+local OpenButton = Instance.new("TextButton", ScreenGui)
+OpenButton.Size = UDim2.new(0, 130, 0, 45)
+OpenButton.Position = UDim2.new(0, 20, 0.5, -22)
+OpenButton.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+OpenButton.Text = "> open_hub "
+OpenButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+OpenButton.Font = Enum.Font.Code
+OpenButton.TextSize = 20
+OpenButton.BorderSizePixel = 0
+OpenButton.AutoButtonColor = false
+OpenButton.Active = true
+OpenButton.Draggable = true
+
+--== Canto arredondado ==--
+Instance.new("UICorner", OpenButton).CornerRadius = UDim.new(0, 15)
+
+--== Gradiente ==--
+local Gradient = Instance.new("UIGradient", OpenButton)
+Gradient.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 80, 80)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(180, 0, 0))
+}
+Gradient.Rotation = 90
+
+--== Animação de clique ==--
+OpenButton.MouseButton1Click:Connect(function()
+	local clickTween = TweenService:Create(OpenButton, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		Size = UDim2.new(0, 125, 0, 42),
+		BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+	})
+	clickTween:Play()
+	clickTween.Completed:Wait()
+
+	local releaseTween = TweenService:Create(OpenButton, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+		Size = UDim2.new(0, 130, 0, 45),
+		BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+	})
+	releaseTween:Play()
+end)
+
+--== Efeito hover ==--
+OpenButton.MouseEnter:Connect(function()
+	TweenService:Create(OpenButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(255, 60, 60)}):Play()
+end)
+
+OpenButton.MouseLeave:Connect(function()
+	TweenService:Create(OpenButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(180, 0, 0)}):Play()
+end)
+
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 450, 0, 300)
+MainFrame.Position = UDim2.new(0.5, -225, 0.5, -150)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+MainFrame.BorderSizePixel = 0
+MainFrame.Visible = false
+MainFrame.Active = true
+MainFrame.Draggable = true
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 30)
+
+local Title = Instance.new("TextLabel", MainFrame)
+Title.Size = UDim2.new(1, 0, 0, 35)
+Title.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
+Title.Text = "Havens Script | you vs homer"
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.Font = Enum.Font.SourceSansBold
+Title.TextSize = 22
+Title.BorderSizePixel = 0
+Instance.new("UICorner", Title).CornerRadius = UDim.new(0, 10)
+
+local CloseButton = Instance.new("TextButton", Title)
+CloseButton.Size = UDim2.new(0, 60, 0, 30)
+CloseButton.Position = UDim2.new(1, -65, 0, 3)
+CloseButton.BackgroundColor3 = Color3.fromRGB(90, 0, 0)
+CloseButton.Text = "fechar"
+CloseButton.TextColor3 = Color3.new(1, 1, 1)
+CloseButton.Font = Enum.Font.SourceSansBold
+CloseButton.TextSize = 18
+CloseButton.BorderSizePixel = 0
+Instance.new("UICorner", CloseButton).CornerRadius = UDim.new(0, 8)
+
+local TabsFrame = Instance.new("Frame", MainFrame)
+TabsFrame.Size = UDim2.new(0, 120, 1, -35)
+TabsFrame.Position = UDim2.new(0, 0, 0, 35)
+TabsFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+TabsFrame.BorderSizePixel = 0
+Instance.new("UICorner", TabsFrame).CornerRadius = UDim.new(0, 10)
+
+local ContentFrame = Instance.new("Frame", MainFrame)
+ContentFrame.Size = UDim2.new(1, -130, 1, -40)
+ContentFrame.Position = UDim2.new(0, 125, 0, 40)
+ContentFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+ContentFrame.BorderSizePixel = 0
+Instance.new("UICorner", ContentFrame).CornerRadius = UDim.new(0, 10)
+
+local TabList = Instance.new("UIListLayout", TabsFrame)
+TabList.Padding = UDim.new(0, 2)
+TabList.FillDirection = Enum.FillDirection.Vertical
+TabList.SortOrder = Enum.SortOrder.LayoutOrder
+TabList.VerticalAlignment = Enum.VerticalAlignment.Top
+
+--== SISTEMA DE CONFIGURAÇÃO ==--
+
+local configs = {}
+local currentConfig = "default"
+
+local function MakeConfig(name)
+	local folder = "HavensConfigs"
+	if not isfolder(folder) then makefolder(folder) end
+	local path = folder .. "/" .. name .. ".json"
+	writefile(path, HttpService:JSONEncode(configs))
+	print("g")
+end
+
+local function LoadConfig(name)
+	local path = "HavensConfigs/" .. name .. ".json"
+	if not isfile(path) then
+		notify("System", "file not founded: " .. name, 3)
+		return
+	end
+	local data = HttpService:JSONDecode(readfile(path))
+	configs = data
+	notify("System", "config: loaded " .. name, 3)
+
+	-- aplicar aos toggles e textbox
+	for _, tab in pairs(ContentFrame:GetChildren()) do
+		if tab:IsA("ScrollingFrame") then
+			for _, item in pairs(tab:GetChildren()) do
+				if item:IsA("TextButton") and item:FindFirstChildWhichIsA("UICorner") then
+					local key = item.Name
+					if configs[key] ~= nil then
+						local val = configs[key]
+						if typeof(val) == "boolean" then
+							item.Text = key .. " : " .. (val and "ON" or "OFF")
+							item.BackgroundColor3 = val and Color3.fromRGB(150,0,0) or Color3.fromRGB(90,0,0)
+						end
+					end
+				elseif item:IsA("TextBox") then
+					local key = item.Name
+					if configs[key] ~= nil then
+						item.Text = tostring(configs[key])
+					end
+				end
+			end
+		end
+	end
+end
+
+--== SISTEMA DE CRIAÇÃO DE TABS ==--
+local function createTab(tabName)
+	local TabButton = Instance.new("TextButton", TabsFrame)
+	TabButton.Size = UDim2.new(1, -10, 0, 30)
+	TabButton.Position = UDim2.new(0, 5, 0, 0)
+	TabButton.BackgroundColor3 = Color3.fromRGB(50, 0, 0)
+	TabButton.Text = tabName
+	TabButton.TextColor3 = Color3.new(1, 1, 1)
+	TabButton.Font = Enum.Font.SourceSansBold
+	TabButton.TextSize = 18
+	TabButton.BorderSizePixel = 0
+	Instance.new("UICorner", TabButton).CornerRadius = UDim.new(0, 13)
+
+	local TabContent = Instance.new("ScrollingFrame", ContentFrame)
+	TabContent.Size = UDim2.new(1, -10, 1, -10)
+	TabContent.Position = UDim2.new(0, 5, 0, 5)
+	TabContent.CanvasSize = UDim2.new(0, 0, 0, 0)
+	TabContent.ScrollBarThickness = 5
+	TabContent.Visible = false
+	TabContent.BackgroundTransparency = 1
+
+	local ListLayout = Instance.new("UIListLayout", TabContent)
+	ListLayout.Padding = UDim.new(0, 10)
+	ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+	ListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+		TabContent.CanvasSize = UDim2.new(0, 0, 0, ListLayout.AbsoluteContentSize.Y + 10)
+	end)
+
+	TabButton.MouseButton1Click:Connect(function()
+		for _, v in pairs(ContentFrame:GetChildren()) do
+			if v:IsA("ScrollingFrame") then
+				v.Visible = false
+			end
+		end
+		for _, v in pairs(TabsFrame:GetChildren()) do
+			if v:IsA("TextButton") then
+				TweenService:Create(v, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(50, 0, 0)}):Play()
+			end
+		end
+		TweenService:Create(TabButton, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(150, 0, 0)}):Play()
+		TabContent.Visible = true
+	end)
+
+	local function AddSection(name)
+	local Section = Instance.new("TextLabel", TabContent)
+	Section.Size = UDim2.new(1, -10, 0, 25)
+	Section.BackgroundColor3 = Color3.fromRGB(70, 0, 0)
+	Section.Text = "-- " .. name .. " --"
+	Section.TextColor3 = Color3.new(1, 1, 1)
+	Section.Font = Enum.Font.SourceSansBold
+	Section.TextSize = 18
+	Section.TextXAlignment = Enum.TextXAlignment.Center
+	Section.BorderSizePixel = 1
+	Instance.new("UICorner", Section).CornerRadius = UDim.new(0, 12)
+end
+
+	local function AddButton(name, callback)
+		local Button = Instance.new("TextButton", TabContent)
+		Button.Size = UDim2.new(1, -10, 0, 30)
+		Button.BackgroundColor3 = Color3.fromRGB(90, 0, 0)
+		Button.Text = name
+		Button.TextColor3 = Color3.new(1, 1, 1)
+		Button.Font = Enum.Font.SourceSans
+		Button.TextSize = 18
+		Button.BorderSizePixel = 0
+		Button.Name = name
+		Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 8)
+
+		Button.MouseButton1Click:Connect(function()
+			TweenService:Create(Button, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(150, 0, 0)}):Play()
+			task.wait(0.1)
+			TweenService:Create(Button, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(90, 0, 0)}):Play()
+			pcall(callback)
+		end)
+	end
+
+	local function AddToggle(name, default, callback)
+		local Toggle = Instance.new("TextButton", TabContent)
+		Toggle.Size = UDim2.new(1, -10, 0, 30)
+		Toggle.BackgroundColor3 = default and Color3.fromRGB(150, 0, 0) or Color3.fromRGB(90, 0, 0)
+		Toggle.TextColor3 = Color3.new(1, 1, 1)
+		Toggle.Font = Enum.Font.SourceSans
+		Toggle.TextSize = 18
+		Toggle.BorderSizePixel = 0
+		Toggle.Name = name
+		Instance.new("UICorner", Toggle).CornerRadius = UDim.new(0, 8)
+
+		local toggled = default
+		Toggle.Text = name .. " : " .. (toggled and "ON" or "OFF")
+		configs[name] = toggled
+
+		Toggle.MouseButton1Click:Connect(function()
+			toggled = not toggled
+			configs[name] = toggled
+			TweenService:Create(Toggle, TweenInfo.new(0.2), {
+				BackgroundColor3 = toggled and Color3.fromRGB(150, 0, 0) or Color3.fromRGB(90, 0, 0)
+			}):Play()
+			Toggle.Text = name .. " : " .. (toggled and "ON" or "OFF")
+			pcall(callback, toggled)
+			MakeConfig(currentConfig)
+		end)
+	end
+
+	local function AddTextBox(placeholder, callback)
+		local Box = Instance.new("TextBox", TabContent)
+		Box.Size = UDim2.new(1, -10, 0, 30)
+		Box.BackgroundColor3 = Color3.fromRGB(60, 0, 0)
+		Box.PlaceholderText = placeholder
+		Box.Text = ""
+		Box.TextColor3 = Color3.new(1, 1, 1)
+		Box.Font = Enum.Font.SourceSans
+		Box.TextSize = 18
+		Box.BorderSizePixel = 0
+		Box.Name = placeholder
+		Instance.new("UICorner", Box).CornerRadius = UDim.new(0, 8)
+
+		Box.FocusLost:Connect(function(enterPressed)
+			if enterPressed then
+				configs[placeholder] = Box.Text
+				MakeConfig(currentConfig)
+				pcall(callback, Box.Text)
+			end
+		end)
+	end
+
+	return {
+		AddSection = AddSection,
+		AddButton = AddButton,
+		AddToggle = AddToggle,
+		AddTextBox = AddTextBox,
+		Content = TabContent
+	}
+end
+
+--== CONTROLES DE ABERTURA ==--
+OpenButton.MouseButton1Click:Connect(function()
+	MainFrame.Visible = not MainFrame.Visible
+end)
+
+CloseButton.MouseButton1Click:Connect(function()
+	MainFrame.Visible = false
+end)
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local remote = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("BodyRotation")
+if remote then
+    remote:Destroy()
+end
+
+
+local CnTab = createTab("config")
+
+CnTab.AddSection("disable the console in delta")
+
+CnTab.AddToggle("Show FPS and MS", false, function(state)
+    local RunService = game:GetService("RunService")
+    local CoreGui = game:GetService("CoreGui")
+
+    if getgenv().ShowFpsRunning == nil then
+        getgenv().ShowFpsRunning = false
+    end
+
+    if state then
+        getgenv().ShowFpsRunning = true
+
+        local fpsGui = Instance.new("ScreenGui")
+        fpsGui.Name = "GhostFPSGui"
+        fpsGui.Parent = CoreGui
+
+        local mainFrame = Instance.new("Frame")
+        mainFrame.Size = UDim2.new(0, 150, 0, 30)
+        mainFrame.Position = UDim2.new(1, -170, 0, 20)
+        mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+        mainFrame.BackgroundTransparency = 0.6
+        mainFrame.BorderSizePixel = 0
+        mainFrame.Parent = fpsGui
+
+        local corner = Instance.new("UICorner", mainFrame)
+        corner.CornerRadius = UDim.new(0, 6)
+
+        local infoLabel = Instance.new("TextLabel")
+        infoLabel.Size = UDim2.new(1, 0, 1, 0)
+        infoLabel.BackgroundTransparency = 1
+        infoLabel.TextColor3 = Color3.new(1, 1, 1)
+        infoLabel.Font = Enum.Font.Code
+        infoLabel.TextSize = 16
+        infoLabel.Text = "Fps: 0 | Ms: 0"
+        infoLabel.Parent = mainFrame
+
+        task.spawn(function()
+            local lastTick = tick()
+            local frameCount = 0
+
+            while getgenv().ShowFpsRunning and fpsGui and fpsGui.Parent do
+                frameCount += 1
+                local now = tick()
+                local delta = RunService.RenderStepped:Wait()
+                local ms = math.floor(delta * 1000)
+
+                if now - lastTick >= 1 then
+                    local fps = frameCount
+                    frameCount = 0
+                    lastTick = now
+                    infoLabel.Text = string.format("Fps: %d | Ms: %d", ms, fps)
+                end
+
+                task.wait(0.1)
+            end
+
+            if fpsGui then
+                fpsGui:Destroy()
+            end
+        end)
+    else
+        getgenv().ShowFpsRunning = false
+        local old = CoreGui:FindFirstChild("GhostFPSGui")
+        if old then
+            old:Destroy()
+        end
+    end
+end)
+
+CnTab.AddButton("ant Lag", function()
+
+loadstring(game:HttpGet("https://rawscripts.net/raw/Universal-Script-AntLag-16900"))()
+
+end)
+
+local CmbTab = createTab("Combate")
+
+
+CmbTab.AddToggle("Show Players", false, function(state)
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
+
+    -- Variável global de controle
+    if getgenv().ShowPlayersRunning == nil then
+        getgenv().ShowPlayersRunning = false
+    end
+
+    if state then
+        getgenv().ShowPlayersRunning = true
+        task.spawn(function()
+            while getgenv().ShowPlayersRunning do
+                for _, player in ipairs(Players:GetPlayers()) do
+                    if player ~= LocalPlayer and player.Character then
+                        for _, part in ipairs(player.Character:GetDescendants()) do
+                            if part:IsA("BasePart") then
+                                part.Transparency = 0
+                                part.LocalTransparencyModifier = 0
+                            elseif part:IsA("Decal") or part:IsA("Texture") then
+                                part.Transparency = 0
+                            end
+                        end
+                    end
+                end
+                task.wait(1)
+            end
+        end)
+    else
+        getgenv().ShowPlayersRunning = false
+    end
+end)
+
+CmbTab.AddToggle("Aura Swing", false, function(state)
+    local Players = game:GetService("Players")
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local LocalPlayer = Players.LocalPlayer
+    local SwingRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Swing")
+
+    if getgenv().AuraSwingRunning == nil then
+        getgenv().AuraSwingRunning = false
+    end
+
+    if state then
+        getgenv().AuraSwingRunning = true
+        task.spawn(function()
+            while getgenv().AuraSwingRunning do
+                local character = LocalPlayer.Character
+                local root = character and character:FindFirstChild("HumanoidRootPart")
+                if root then
+                    local nearest, nearestDist = nil, 9
+                    for _, plr in ipairs(Players:GetPlayers()) do
+                        if plr ~= LocalPlayer and plr.Character then
+                            local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+                            local hasHighlight = plr.Character:FindFirstChildOfClass("Highlight")
+                            local rootT = plr.Character:FindFirstChild("HumanoidRootPart")
+                            if hum and hum.Health > 0 and rootT and not hasHighlight then
+                                local dist = (root.Position - rootT.Position).Magnitude
+                                if dist <= nearestDist then
+                                    nearest = plr
+                                    nearestDist = dist
+                                end
+                            end
+                        end
+                    end
+
+                    if nearest and nearest.Character and nearest.Character:FindFirstChild("HumanoidRootPart") then
+                        local tRoot = nearest.Character.HumanoidRootPart
+                        local dir = Vector3.new(tRoot.Position.X, root.Position.Y, tRoot.Position.Z) - root.Position
+                        root.CFrame = CFrame.new(root.Position, root.Position + dir)
+                        SwingRemote:FireServer()
+                    end
+                end
+                task.wait(0.35)
+            end
+        end)
+    else
+        getgenv().AuraSwingRunning = false
+    end
+end)
+
+
+CmbTab.AddToggle("ESP", false, function(state)
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local Camera = workspace.CurrentCamera
+    local LocalPlayer = Players.LocalPlayer
+
+    -- Variável global de controle
+    if getgenv().EspRunning == nil then
+        getgenv().EspRunning = false
+    end
+
+    local espObjects = {}
+
+    local function createESP(player)
+        if player == LocalPlayer or espObjects[player] then return end
+
+        local box = Drawing.new("Square")
+        box.Thickness = 1
+        box.Color = Color3.fromRGB(255, 0, 0)
+        box.Filled = false
+        box.Visible = false
+        espObjects[player] = box
+
+        player.CharacterRemoving:Connect(function()
+            box.Visible = false
+        end)
+
+        player.AncestryChanged:Connect(function(_, parent)
+            if not parent and espObjects[player] then
+                espObjects[player]:Remove()
+                espObjects[player] = nil
+            end
+        end)
+    end
+
+    local function removeESP()
+        for _, box in pairs(espObjects) do
+            box:Remove()
+        end
+        espObjects = {}
+    end
+
+    if state then
+        getgenv().EspRunning = true
+
+        for _, player in ipairs(Players:GetPlayers()) do
+            createESP(player)
+        end
+
+        Players.PlayerAdded:Connect(createESP)
+        Players.PlayerRemoving:Connect(function(player)
+            if espObjects[player] then
+                espObjects[player]:Remove()
+                espObjects[player] = nil
+            end
+        end)
+
+        task.spawn(function()
+            while getgenv().EspRunning do
+                for player, box in pairs(espObjects) do
+                    local char = player.Character
+                    local head = char and char:FindFirstChild("Head")
+                    if head then
+                        local headPos, onScreen = Camera:WorldToViewportPoint(head.Position)
+                        if onScreen then
+                            local size = 35 / (headPos.Z / 10)
+                            box.Size = Vector2.new(size, size)
+                            box.Position = Vector2.new(headPos.X - size / 2, headPos.Y - size / 2)
+                            box.Visible = true
+                        else
+                            box.Visible = false
+                        end
+                    else
+                        box.Visible = false
+                    end
+                end
+                RunService.RenderStepped:Wait()
+            end
+            removeESP()
+        end)
+    else
+        getgenv().EspRunning = false
+        removeESP()
+    end
+end)
+
+CmbTab.AddToggle("Silent Walk", false, function(state)
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
+
+    if getgenv().SilentWalkRunning == nil then
+        getgenv().SilentWalkRunning = false
+    end
+
+    if state then
+        getgenv().SilentWalkRunning = true
+        task.spawn(function()
+            while getgenv().SilentWalkRunning do
+                local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+                local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+
+                if humanoid and humanoid.MoveDirection.Magnitude > 0 then
+                    humanoid.WalkSpeed = 0
+                    task.wait(0.02)
+                    humanoid.WalkSpeed = 17
+                    task.wait(0.3)
+                else
+                    task.wait(0.05)
+                end
+            end
+        end)
+    else
+        getgenv().SilentWalkRunning = false
+
+        -- Restaura velocidade normal ao desligar
+        local char = LocalPlayer.Character
+        local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = 17
+        end
+    end
+end)
+
+CmbTab.AddToggle("Ant Slow (Beta)", false, function(state)
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
+
+    if getgenv().AntSlowRunning == nil then
+        getgenv().AntSlowRunning = false
+    end
+
+    if state then
+        getgenv().AntSlowRunning = true
+
+        task.spawn(function()
+            while getgenv().AntSlowRunning do
+                local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+                local humanoid = char:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    humanoid.WalkSpeed = 20
+                end
+                task.wait(0.05)
+            end
+        end)
+    else
+        getgenv().AntSlowRunning = false
+        -- Restaura a velocidade normal ao desativar
+        local char = LocalPlayer.Character
+        local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = 20
+        end
+    end
+end)
+
+
+local TTab = createTab("Troll")
+
+
+TTab.AddToggle("Spin Bot", false, function(state)
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local LocalPlayer = Players.LocalPlayer
+
+    if getgenv().SpinBotRunning == nil then
+        getgenv().SpinBotRunning = false
+    end
+
+    if state then
+        getgenv().SpinBotRunning = true
+        task.spawn(function()
+            while getgenv().SpinBotRunning do
+                local char = LocalPlayer.Character
+                local root = char and char:FindFirstChild("HumanoidRootPart")
+                if root then
+                    root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(10), 0)
+                end
+                RunService.RenderStepped:Wait()
+            end
+        end)
+    else
+        getgenv().SpinBotRunning = false
+    end
+end)
+
+TTab.AddToggle("Float", false, function(state)
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local LocalPlayer = Players.LocalPlayer
+
+    if getgenv().FloatRunning == nil then
+        getgenv().FloatRunning = false
+    end
+
+    if state then
+        getgenv().FloatRunning = true
+
+        task.spawn(function()
+            local floatPart
+
+            local function createFloat()
+                local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+                local root = char:WaitForChild("HumanoidRootPart")
+
+                -- Cria ou recria a parte
+                if floatPart then
+                    floatPart:Destroy()
+                end
+
+                floatPart = Instance.new("Part")
+                floatPart.Size = Vector3.new(6, 0.5, 6)
+                floatPart.Anchored = true
+                floatPart.CanCollide = true
+                floatPart.Transparency = 1
+                floatPart.Name = "GhostFloatPart"
+                floatPart.Parent = workspace
+
+                -- Atualiza a posição da parte
+                task.spawn(function()
+                    while getgenv().FloatRunning and floatPart and root do
+                        floatPart.CFrame = CFrame.new(root.Position.X, root.Position.Y - 3.5, root.Position.Z)
+                        RunService.RenderStepped:Wait()
+                    end
+                    if floatPart then
+                        floatPart:Destroy()
+                    end
+                end)
+            end
+
+            -- Cria e recria após respawn
+            createFloat()
+            LocalPlayer.CharacterAdded:Connect(function()
+                if getgenv().FloatRunning then
+                    task.wait(1)
+                    createFloat()
+                end
+            end)
+        end)
+    else
+        getgenv().FloatRunning = false
+        for _, v in ipairs(workspace:GetChildren()) do
+            if v.Name == "GhostFloatPart" and v:IsA("Part") then
+                v:Destroy()
+            end
+        end
+    end
+end)
+
+
+loadstring(game:HttpGet("https://gist.githubusercontent.com/Cat558-uz/220ee42d2ee4694fe4975a19e00e64b3/raw/91efe415c70c7e7cd78d437f46dc5284a6fc8218/gistfile1.txt"))()
