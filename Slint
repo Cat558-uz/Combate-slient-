@@ -1,4 +1,4 @@
-local TweenService = game:GetService("TweenService")
+ local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
@@ -190,7 +190,7 @@ Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 30)
 local Title = Instance.new("TextLabel", MainFrame)
 Title.Size = UDim2.new(1, 0, 0, 35)
 Title.BackgroundColor3 = Color3.fromRGB(120, 0, 0)
-Title.Text = "Havens Script | combate slient"
+Title.Text = "Havens Script | you vs homer"
 Title.TextColor3 = Color3.new(1, 1, 1)
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 22
@@ -581,7 +581,7 @@ CmbTab.AddToggle("Aura Swing", false, function(state)
                         SwingRemote:FireServer()
                     end
                 end
-                task.wait(0.35)
+                task.wait(0.1)
             end
         end)
     else
@@ -590,7 +590,164 @@ CmbTab.AddToggle("Aura Swing", false, function(state)
 end)
 
 
-CmbTab.AddToggle("ESP", false, function(state)
+CmbTab.AddToggle("ESP V5", false, function(state)
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local Camera = workspace.CurrentCamera
+    local Workspace = game:GetService("Workspace")
+    local LocalPlayer = Players.LocalPlayer
+    local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+
+    if getgenv().EspRunning == nil then
+        getgenv().EspRunning = false
+    end
+
+    local espObjects = {}
+
+    local function hasLineOfSight(targetPart)
+        if not targetPart or not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("Head") then
+            return false
+        end
+        local origin = LocalPlayer.Character.Head.Position
+        local direction = (targetPart.Position - origin)
+        local params = RaycastParams.new()
+        params.FilterType = Enum.RaycastFilterType.Blacklist
+        params.FilterDescendantsInstances = {LocalPlayer.Character}
+        local result = Workspace:Raycast(origin, direction, params)
+        if result and result.Instance:IsDescendantOf(targetPart.Parent) then
+            return true
+        end
+        return result == nil
+    end
+
+    local function createESP(plr)
+        if plr == LocalPlayer or espObjects[plr] then return end
+
+        local outline = Drawing.new("Circle")
+        outline.Thickness = 4
+        outline.NumSides = 10
+        outline.Filled = false
+        outline.Color = Color3.fromRGB(0, 0, 0)
+        outline.Visible = false
+
+        local circle = Drawing.new("Circle")
+        circle.Thickness = 2
+        circle.NumSides = 12
+        circle.Filled = false
+        circle.Color = Color3.fromRGB(255, 0, 0)
+        circle.Visible = false
+
+        local nameText = Drawing.new("Text")
+        nameText.Size = 14
+        nameText.Center = true
+        nameText.Outline = true
+        nameText.Font = 2
+        nameText.Color = Color3.fromRGB(255, 255, 255)
+        nameText.Visible = false
+        nameText.Text = plr.DisplayName or plr.Name
+
+        espObjects[plr] = {outline = outline, circle = circle, text = nameText}
+
+        plr.CharacterRemoving:Connect(function()
+            outline.Visible = false
+            circle.Visible = false
+            nameText.Visible = false
+        end)
+
+        plr.AncestryChanged:Connect(function(_, parent)
+            if not parent and espObjects[plr] then
+                espObjects[plr].outline:Remove()
+                espObjects[plr].circle:Remove()
+                espObjects[plr].text:Remove()
+                espObjects[plr] = nil
+            end
+        end)
+    end
+
+    local function removeESP()
+        for _, obj in pairs(espObjects) do
+            obj.outline:Remove()
+            obj.circle:Remove()
+            obj.text:Remove()
+        end
+        espObjects = {}
+    end
+
+    if state then
+        getgenv().EspRunning = true
+
+        for _, plr in ipairs(Players:GetPlayers()) do
+            createESP(plr)
+        end
+
+        Players.PlayerAdded:Connect(createESP)
+        Players.PlayerRemoving:Connect(function(plr)
+            if espObjects[plr] then
+                espObjects[plr].outline:Remove()
+                espObjects[plr].circle:Remove()
+                espObjects[plr].text:Remove()
+                espObjects[plr] = nil
+            end
+        end)
+
+        task.spawn(function()
+            while getgenv().EspRunning do
+                root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                for _, plr in pairs(Players:GetPlayers()) do
+                    if plr ~= LocalPlayer and plr.Character then
+                        local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+                        local hasHighlight = plr.Character:FindFirstChildOfClass("Highlight")
+                        local rootT = plr.Character:FindFirstChild("HumanoidRootPart")
+                        if hum and hum.Health > 0 and rootT and not hasHighlight then
+                            if not espObjects[plr] then
+                                createESP(plr)
+                            end
+                            local obj = espObjects[plr]
+                            local pos, onScreen = Camera:WorldToViewportPoint(rootT.Position)
+                            if onScreen then
+                                local distance = (Camera.CFrame.Position - rootT.Position).Magnitude
+                                local radius = math.clamp(100 / (distance / 10), 25, 120)
+                                local visible = hasLineOfSight(rootT)
+                                local color = visible and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+
+                                obj.outline.Position = Vector2.new(pos.X, pos.Y)
+                                obj.outline.Radius = radius + 2
+                                obj.outline.Visible = true
+
+                                obj.circle.Position = Vector2.new(pos.X, pos.Y)
+                                obj.circle.Radius = radius
+                                obj.circle.Color = color
+                                obj.circle.Visible = true
+
+                                obj.text.Position = Vector2.new(pos.X, pos.Y - radius - 15)
+                                obj.text.Visible = true
+                            else
+                                if espObjects[plr] then
+                                    obj.outline.Visible = false
+                                    obj.circle.Visible = false
+                                    obj.text.Visible = false
+                                end
+                            end
+                        else
+                            if espObjects[plr] then
+                                espObjects[plr].outline.Visible = false
+                                espObjects[plr].circle.Visible = false
+                                espObjects[plr].text.Visible = false
+                            end
+                        end
+                    end
+                end
+                RunService.RenderStepped:Wait()
+            end
+            removeESP()
+        end)
+    else
+        getgenv().EspRunning = false
+        removeESP()
+    end
+end)
+
+CmbTab.AddToggle("ESP basic square", false, function(state)
     local Players = game:GetService("Players")
     local RunService = game:GetService("RunService")
     local Camera = workspace.CurrentCamera
